@@ -1,35 +1,24 @@
-resource "aws_vpc" "main_vpc" {
-  cidr_block = "10.0.0.0/16"
-}
+module "main_vpc" {
+  source = "terraform-aws-modules/vpc/aws"
 
-resource "aws_subnet" "main_public" {
-  vpc_id     = aws_vpc.main_vpc.id
-  cidr_block = "10.0.1.0/24"
+  name = "main_vpc"
+  cidr = "10.0.0.0/16"
 
-  tags = {
-    Name = "Main"
+  azs             = ["us-east-1a", "us-east-1b", "us-east-1c"]
+  private_subnets = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+  public_subnets  = ["10.0.4.0/24", "10.0.5.0/24", "10.0.6.0/24"]
+
+  enable_nat_gateway   = true
+  single_nat_gateway   = true
+  enable_dns_hostnames = true
+
+  public_subnet_tags = {
+    "kubernetes.io/cluster/eks-cluster-1" = "shared"
+    "kubernetes.io/role/elb"              = 1
   }
-}
 
-resource "aws_internet_gateway" "main_gateway" {
-  vpc_id = aws_vpc.main_vpc.id
-
-  tags = {
-    Name = "main"
+  private_subnet_tags = {
+    "kubernetes.io/cluster/eks-cluster-1" = "shared"
+    "kubernetes.io/role/internal-elb"     = 1
   }
-}
-
-resource "aws_route" "default_route" {
-  route_table_id         = aws_route_table.main_public_route_table.id
-  destination_cidr_block = "0.0.0.0/0"
-  gateway_id             = aws_internet_gateway.main_gateway.id
-}
-
-resource "aws_route_table" "main_public_route_table" {
-  vpc_id = aws_vpc.main_vpc.id
-}
-
-resource "aws_route_table_association" "main_subnet_route_association" {
-  subnet_id      = aws_subnet.main_public.id
-  route_table_id = aws_route_table.main_public_route_table.id
 }
